@@ -6,10 +6,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"io/ioutil"
 	"os"
-
-	"github.com/dgrijalva/jwt-go"
+	"time"
 )
 
 var (
@@ -27,6 +27,10 @@ var (
 	}
 )
 
+const (
+	timestampFormat = "2006-01-02T15:04:05 UTC"
+)
+
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 
@@ -37,9 +41,21 @@ func main() {
 			continue
 		}
 		if keyName != "" {
-			fmt.Fprintf(os.Stderr, "Signed by '%s'\n", keyName)
+			fmt.Fprintf(os.Stderr, "Signed by: '%s'\n", keyName)
 		}
-		fmt.Fprintln(os.Stderr, "Valid:", token.Valid)
+		fmt.Fprintln(os.Stderr, "Valid:    ", token.Valid)
+		if claims, ok := token.Claims.(jwt.MapClaims); ok {
+			iat := claims["iat"]
+			exp := claims["exp"]
+
+			if iat, ok := iat.(float64); ok {
+				fmt.Fprintln(os.Stderr, "Issued:   ", time.Unix(int64(iat), 0).UTC().Format(timestampFormat))
+			}
+
+			if exp, ok := exp.(float64); ok {
+				fmt.Fprintln(os.Stderr, "Expires:  ", time.Unix(int64(exp), 0).UTC().Format(timestampFormat))
+			}
+		}
 
 		b, err := json.MarshalIndent(token.Claims, "", "  ")
 		abortIfError(err)
